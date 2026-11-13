@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
-import { LISTING_URL, USER_AGENT, MAX_ITEMS, MAX_AGE_DAYS, MAX_ARTICLE_FETCHES, FETCH_DELAY_MS, OUT_DIR } from './config.js'
+import { LISTING_URL, USER_AGENT, MAX_ITEMS, MAX_AGE_DAYS, FEED_START, MAX_ARTICLE_FETCHES, FETCH_DELAY_MS, OUT_DIR } from './config.js'
 import { extractArticleUrls, parseArticle } from './parse.js'
 import { buildRss } from './rss.js'
+import { selectItems } from './select.js'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -16,17 +17,15 @@ async function main() {
   // Guardrail: 0 links = layout changed. Fail → last good feed stays published.
   if (urls.length === 0) throw new Error('No article links on listing page — layout changed?')
 
-  const cutoff = Date.now() - MAX_AGE_DAYS * 864e5
-  const items = []
+  const articles = []
   for (const url of urls) {
     const a = parseArticle(await get(url), url)
     if (!a.title || !a.date) throw new Error(`Missing title/date for ${url} — parser broken?`)
-    if (a.isProductUpdate && a.date.getTime() >= cutoff) items.push(a)
+    articles.push(a)
     await sleep(FETCH_DELAY_MS)
   }
 
-  items.sort((a, b) => b.date - a.date)
-  const feedItems = items.slice(0, MAX_ITEMS)
+  const feedItems = selectItems(articles, { now: new Date(), feedStart: FEED_START, maxAgeDays: MAX_AGE_DAYS, maxItems: MAX_ITEMS })
 
   const xml = buildRss({
     title: 'Claude — Product updates',

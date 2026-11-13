@@ -6,7 +6,8 @@ Slack's RSS app (`/feed`) posts new items to the channel. Unofficial mirror; con
 ## How it works
 1. Listing page → English `/resources/articles/*` links (max 15)
 2. Each article → `og:title`, `og:description`, `article:published_time`, category link
-3. Keep "Product updates" ≤ 14 days old, newest 10 → `dist/rss.xml`
+3. Keep "Product updates" ≤ 14 days old and published on/after `FEED_START` (2026-11-13), newest 10 → `dist/rss.xml`.
+   `FEED_START` means subscribing in Slack never posts a backlog; only articles published after launch appear.
 4. Pages deploys **only** `dist/` (rss.xml + index.html). Repo itself can stay private.
 
 Guardrails: no links / missing title or date → job fails, last good feed stays live.
